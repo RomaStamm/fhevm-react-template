@@ -619,4 +619,4 @@ MIT License - see [LICENSE](LICENSE) file for details
 
 **Built for the FHEVM Community | Powered by Zama | Production-Ready Security**
 
-📚 [Setup Guide](SETUP.md) | 📖 [Documentation](docs/) | 🚀 [Get Started](#quick-start) | 🎥 [Demo Video](demo.mp4)
+📚 [Setup Guide](SETUP.md) | 📖 [Documentation](docs/) | 🚀 [Get Started](#quick-start) | 🎥 [Demo Video demo.mp4]
