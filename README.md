@@ -14,7 +14,6 @@ This repository provides a complete FHEVM SDK solution with production-ready sec
 ## 🌐 Live Demo & Resources
 
 - **Live Application**: [https://fhe-literature-review-system.vercel.app/](https://fhe-literature-review-system.vercel.app/)
-- **GitHub Repository**: [https://github.com/RomaStamm/FHELiteratureReviewSystem](https://github.com/RomaStamm/FHELiteratureReviewSystem)
 - **Video Demonstration**: `demo.mp4` (Download required for viewing - streaming links unavailable)
 - **Smart Contract Address**: `0xE30e4b2A47C0605AaBaAde36f15d804fec4F9CF0`
 - **Network**: Sepolia Testnet (Chain ID: 11155111)
