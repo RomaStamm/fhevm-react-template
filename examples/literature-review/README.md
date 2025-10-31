@@ -1,341 +1,267 @@
-# Literature Review System - FHEVM SDK Integration Example
+# Literature Review System
 
-**A complete production dApp demonstrating confidential peer review using Fully Homomorphic Encryption**
-
-This example showcases a real-world application of the FHEVM SDK in a complex, multi-user workflow application.
-
-## 🎯 Overview
-
-The Literature Review System is a decentralized platform for confidential literary awards. It demonstrates:
-
-- **Encrypted Submissions**: Authors submit works with FHE-encrypted metadata
-- **Confidential Reviews**: Reviewers provide encrypted scores and feedback
-- **Private Scoring**: Aggregate scores calculated without revealing individual reviews
-- **Access Control**: Multi-level authorization system
-- **Period Management**: Time-locked submission and review phases
-
-## 🏗️ Architecture
-
-### Smart Contract Layer
-
-```
-LiteratureReviewSystem.sol
-├── Submission Management
-├── Reviewer Authorization
-├── Review Collection (FHE)
-├── Score Calculation (FHE)
-└── Award Distribution
-```
-
-### Frontend Layer (with FHEVM SDK)
-
-```
-React App
-├── @fhevm/sdk Integration
-├── Wallet Connection
-├── Encrypted Form Submissions
-├── Decryption of Results
-└── Real-time Status Updates
-```
+A decentralized confidential literary awards platform powered by Fully Homomorphic Encryption (FHE) technology, ensuring complete privacy throughout the submission, review, and award selection process.
 
 ## 🚀 Quick Start
 
+### Install Dependencies
+
 ```bash
-# Install dependencies
-cd examples/literature-review
 npm install
+```
 
-# Configure environment
-cp .env.example .env
-# Edit .env with your settings
+### Run Development Server
 
-# Run development server
+```bash
+# Start the Next.js frontend
 npm run dev
 
 # Open http://localhost:3000
 ```
 
-## 📁 Project Structure
-
-```
-literature-review/
-├── contracts/
-│   └── LiteratureReviewSystem.sol    # Main smart contract
-├── src/
-│   ├── components/
-│   │   ├── SubmitWork.tsx           # Submission form with FHE
-│   │   ├── ReviewForm.tsx           # Review form with FHE
-│   │   ├── ReviewerDashboard.tsx    # Reviewer interface
-│   │   └── AwardResults.tsx         # Results display
-│   ├── hooks/
-│   │   ├── useLiteratureContract.ts # Contract interactions
-│   │   ├── useSubmission.ts         # Submission logic
-│   │   └── useReview.ts             # Review logic
-│   └── lib/
-│       └── config.ts                # FHEVM SDK configuration
-├── scripts/
-│   ├── deploy.js                    # Deployment script
-│   ├── verify.js                    # Contract verification
-│   └── simulate.js                  # E2E simulation
-└── test/
-    └── LiteratureReviewSystem.test.js
-```
-
-## 🔐 FHEVM SDK Integration
-
-### 1. Provider Setup
-
-```typescript
-// src/app/layout.tsx
-import { FHEVMProvider } from '@fhevm/sdk/react';
-
-export default function RootLayout({ children }) {
-  return (
-    <FHEVMProvider contractAddress={process.env.NEXT_PUBLIC_CONTRACT_ADDRESS}>
-      {children}
-    </FHEVMProvider>
-  );
-}
-```
-
-### 2. Encrypted Submission
-
-```typescript
-// src/components/SubmitWork.tsx
-import { useEncrypt } from '@fhevm/sdk/react';
-import { useLiteratureContract } from '../hooks/useLiteratureContract';
-
-export function SubmitWork() {
-  const { encrypt, isEncrypting } = useEncrypt();
-  const { submitWork } = useLiteratureContract();
-
-  const handleSubmit = async (data) => {
-    // No encryption needed for public metadata
-    const { title, author, genre } = data;
-
-    // Submit to contract
-    await submitWork({
-      title,
-      author,
-      genre,
-      ipfsHash: await uploadToIPFS(data.content)
-    });
-  };
-
-  return (
-    <form onSubmit={handleSubmit}>
-      {/* Form fields */}
-    </form>
-  );
-}
-```
-
-### 3. Encrypted Review
-
-```typescript
-// src/components/ReviewForm.tsx
-import { useEncrypt } from '@fhevm/sdk/react';
-
-export function ReviewForm({ workId }) {
-  const { encrypt, isEncrypting } = useEncrypt();
-  const { submitReview } = useLiteratureContract();
-
-  const handleSubmit = async (scores) => {
-    // Scores are encrypted on-chain, not client-side
-    // Contract handles FHE encryption internally
-    await submitReview({
-      workId,
-      qualityScore: scores.quality,
-      originalityScore: scores.originality,
-      impactScore: scores.impact,
-      comments: scores.comments // Encrypted in contract
-    });
-  };
-
-  return <form onSubmit={handleSubmit}>{/* Review form */}</form>;
-}
-```
-
-### 4. Decryption of Results
-
-```typescript
-// src/components/AwardResults.tsx
-import { useDecrypt } from '@fhevm/sdk/react';
-
-export function AwardResults({ period }) {
-  const { decrypt } = useDecrypt();
-  const { getAwards } = useLiteratureContract();
-
-  useEffect(() => {
-    async function loadResults() {
-      const awards = await getAwards(period);
-      // Awards are public after announcement
-      // Individual scores remain encrypted
-    }
-
-    loadResults();
-  }, [period]);
-}
-```
-
-## 💡 Key Features Demonstrated
-
-### 1. Multi-Phase Workflow
-
-```typescript
-// Period-based access control
-const isSubmissionPeriod = await contract.isSubmissionPeriodActive();
-const isReviewPeriod = await contract.isReviewPeriodActive();
-
-// UI adapts based on current period
-{isSubmissionPeriod && <SubmitWork />}
-{isReviewPeriod && <ReviewForm />}
-```
-
-### 2. Role-Based Access
-
-```typescript
-// Check user authorization
-const isAuthorizedReviewer = await contract.authorizedReviewers(address);
-const isOwner = await contract.owner() === address;
-
-// Conditional rendering
-{isAuthorizedReviewer && <ReviewerDashboard />}
-{isOwner && <AdminPanel />}
-```
-
-### 3. FHE Score Aggregation
-
-```solidity
-// In smart contract
-function submitReview(
-    uint32 _workId,
-    uint32 _qualityScore,
-    uint32 _originalityScore,
-    uint32 _impactScore,
-    string memory _encryptedComments
-) external onlyAuthorizedReviewer {
-    // Encrypt scores using FHE
-    euint32 encryptedQuality = FHE.asEuint32(_qualityScore);
-    euint32 encryptedOriginality = FHE.asEuint32(_originalityScore);
-    euint32 encryptedImpact = FHE.asEuint32(_impactScore);
-
-    // Store encrypted reviews
-    reviews[currentReviewPeriod][_workId][msg.sender] = Review({
-        encryptedQualityScore: encryptedQuality,
-        encryptedOriginalityScore: encryptedOriginality,
-        encryptedImpactScore: encryptedImpact,
-        encryptedComments: _encryptedComments,
-        submitted: true,
-        reviewer: msg.sender,
-        reviewTime: block.timestamp
-    });
-}
-```
-
-## 📊 User Workflows
-
-### Author Workflow
-
-1. Connect wallet
-2. Wait for submission period
-3. Submit literary work with metadata
-4. Track submission status
-5. View results after awards announced
-
-### Reviewer Workflow
-
-1. Register as reviewer
-2. Wait for admin approval
-3. During review period, evaluate works
-4. Submit encrypted reviews
-5. Build reputation through contributions
-
-### Admin Workflow
-
-1. Start submission period
-2. Approve reviewers
-3. Start review period
-4. Calculate results (FHE computation)
-5. Announce awards
-
-## 🧪 Testing
+### Smart Contract Development
 
 ```bash
-# Run unit tests
+# Compile contracts
+npm run compile
+
+# Run tests
 npm test
 
-# Run E2E simulation
-npm run simulate
-
-# Test with gas reporting
-npm run test:gas
-```
-
-## 📝 Environment Configuration
-
-```env
-# Smart Contract
-NEXT_PUBLIC_CONTRACT_ADDRESS=0x...
-NEXT_PUBLIC_NETWORK=sepolia
-
-# RPC Provider
-NEXT_PUBLIC_INFURA_KEY=...
-NEXT_PUBLIC_ALCHEMY_KEY=...
-
-# IPFS
-NEXT_PUBLIC_PINATA_KEY=...
-NEXT_PUBLIC_PINATA_SECRET=...
-
-# FHEVM SDK
-NEXT_PUBLIC_ACL_ADDRESS=0x...
-NEXT_PUBLIC_GATEWAY_URL=https://gateway.zama.ai
-```
-
-## 🚀 Deployment
-
-### Deploy Smart Contract
-
-```bash
+# Deploy to Sepolia testnet
 npm run deploy
-npm run verify
 ```
 
-### Deploy Frontend
+## 🌐 Live Demo
 
-```bash
-npm run build
-vercel deploy
+**Web Application:** https://literature-review-system-smoky.vercel.app/
+
+ 
+
+**Smart Contract Address:** `0xE30e4b2A47C0605AaBaAde36f15d804fec4F9CF0`
+
+## 📖 Overview
+
+The Literature Review System revolutionizes the literary awards process by leveraging blockchain technology and Fully Homomorphic Encryption (FHE) to create a transparent yet confidential evaluation system. This platform enables authors to submit their literary works with complete privacy while maintaining the integrity and fairness of the review process.
+
+## 🎯 Core Concepts
+
+### FHE-Powered Confidential Literary Work Review
+
+This platform implements **Fully Homomorphic Encryption (FHE)** to enable computation on encrypted data, ensuring that sensitive information remains confidential throughout the entire awards process:
+
+- **Encrypted Submissions**: Authors' works and personal information are encrypted on-chain, protecting their identity and content from unauthorized access
+- **Private Reviews**: Expert reviewers can evaluate literary works through encrypted scores and comments, preventing bias and manipulation
+- **Confidential Scoring**: Review scores (quality, originality, impact) are computed homomorphically, ensuring fair evaluation without revealing individual reviewer ratings
+- **Anonymous Awards**: Winners are selected based on encrypted aggregate scores, maintaining confidentiality until the official announcement
+
+### Privacy-Preserving Literary Awards Selection
+
+The platform addresses critical challenges in traditional literary award systems:
+
+1. **Eliminating Bias**: By encrypting author identities and submission details, the system prevents nepotism and favoritism during the review process
+2. **Protecting Intellectual Property**: Unpublished literary works remain confidential, safeguarding authors' creative rights
+3. **Fair Evaluation**: FHE enables mathematical operations on encrypted scores, ensuring objective winner selection without exposing individual judgments
+4. **Transparent Process**: Blockchain technology provides immutable records of all submissions and reviews while maintaining privacy
+5. **Reviewer Independence**: Encrypted reviews prevent external pressure or influence on expert evaluators
+
+## ✨ Key Features
+
+### For Authors
+
+- **Secure Submission**: Submit literary works with encrypted metadata (title, author name, genre, content hash)
+- **Privacy Protection**: Author identity remains confidential during the review period
+- **Real-time Status**: Track submission status and review progress
+- **Multiple Categories**: Support for Fiction, Poetry, Drama, and Non-Fiction genres
+- **IPFS Integration**: Decentralized storage for complete literary works
+
+### For Expert Reviewers
+
+- **Confidential Evaluation**: Submit encrypted reviews with quality, originality, and impact scores
+- **Anonymous Feedback**: Provide detailed comments while maintaining reviewer anonymity
+- **Professional Recognition**: Build reputation through verifiable review contributions
+- **Flexible Scoring**: Rate literary works on multiple dimensions (1-100 scale)
+- **Review History**: Access past evaluations and contributions
+
+### For Administrators
+
+- **Period Management**: Control submission and review periods
+- **Reviewer Authorization**: Approve qualified experts to participate in evaluations
+- **Award Announcements**: Publish winners after encrypted score computation
+- **Statistical Insights**: Monitor platform activity and participation metrics
+- **Quality Control**: Ensure fair and thorough review processes
+
+## 🔐 Technical Architecture
+
+### FHE Implementation
+
+The platform utilizes Fully Homomorphic Encryption to perform computations on encrypted data:
+
+```
+Encrypted Scores → Homomorphic Addition → Encrypted Total → Decryption → Winner
 ```
 
-## 📚 Learn More
+**Key Operations:**
+- **Homomorphic Addition**: Aggregate multiple encrypted review scores
+- **Homomorphic Comparison**: Compare encrypted totals to determine rankings
+- **Threshold Decryption**: Reveal winners only after achieving consensus
 
-### Contract Details
+### Smart Contract Components
 
-- **Network**: Sepolia Testnet
-- **Contract Address**: `0xE30e4b2A47C0605AaBaAde36f15d804fec4F9CF0`
-- **Etherscan**: [View on Etherscan](https://sepolia.etherscan.io/address/0xE30e4b2A47C0605AaBaAde36f15d804fec4F9CF0)
+- **Submission Management**: Handle encrypted work submissions and metadata
+- **Reviewer Registry**: Maintain authorized expert reviewer list
+- **Review System**: Store and process encrypted evaluations
+- **Award Engine**: Calculate winners using FHE operations
+- **Period Controller**: Manage submission and review timeframes
 
-### Documentation
+### Technology Stack
 
-- [Smart Contract Documentation](../../README.md)
-- [FHEVM SDK Documentation](../../packages/fhevm-sdk/README.md)
-- [Deployment Guide](./DEPLOYMENT.md)
+- **Smart Contracts**: Solidity 0.8.24
+- **Encryption**: Zama FHEVM for fully homomorphic encryption
+- **Storage**: IPFS for decentralized content storage
+- **Blockchain**: Ethereum-compatible networks
+- **Frontend**: Next.js 14, React 18, TypeScript
+- **Styling**: Tailwind CSS
+- **Web3**: Ethers.js v6
+- **SDK**: @fhevm/sdk for FHE operations
 
-### Resources
+### Privacy Guarantees
 
-- [Zama FHEVM Docs](https://docs.zama.ai/fhevm)
-- [FHE Encryption Guide](../../docs/encryption-guide.md)
-- [Best Practices](../../docs/best-practices.md)
+- **Zero-Knowledge Proofs**: Verify submissions without revealing content
+- **Encrypted Storage**: All sensitive data stored in encrypted format on-chain
+- **Selective Disclosure**: Only reveal information when explicitly authorized
+- **Immutable Records**: Blockchain ensures tamper-proof audit trail
+
+## 🎬 Demo Video
+
+Watch our comprehensive demonstration showcasing the complete workflow from submission to award announcement:
+
+
+
+The video demonstrates:
+- Author submitting an encrypted literary work
+- Expert reviewer registration and authorization
+- Confidential review submission with encrypted scores
+- Automatic FHE computation of winner
+- Award announcement and result verification
+
+## 📸 On-Chain Transaction Screenshots
+
+LiteratureReviewSystem.png
+
+## 🏆 Use Cases
+
+### International Literary Awards
+
+- **Global Competitions**: Enable worldwide participation without geographical bias
+- **Multi-Language Support**: Evaluate works across different languages fairly
+- **Cultural Sensitivity**: Protect authors from cultural or political bias
+
+### Academic Literary Research
+
+- **Peer Review**: Confidential evaluation of scholarly literary analysis
+- **Thesis Evaluation**: Anonymous assessment of graduate literary research
+- **Journal Submissions**: Private review process for academic publications
+
+### Publishing House Contests
+
+- **Manuscript Selection**: Fair evaluation of unpublished works
+- **Talent Discovery**: Identify promising authors without bias
+- **Rights Protection**: Secure handling of intellectual property
+
+### Creative Writing Communities
+
+- **Writing Competitions**: Organize fair contests with encrypted submissions
+- **Feedback Exchange**: Provide honest critiques without personal conflicts
+- **Skill Development**: Track improvement through anonymous peer reviews
+
+## 📋 User Workflow
+
+### 1. Submission Phase
+- Authors submit literary works during the active submission period
+- Work details include: title, author name, genre, and IPFS content hash
+- All sensitive data is encrypted using FHE before storing on-chain
+
+### 2. Review Phase
+- Expert reviewers register and await administrator approval
+- Authorized reviewers evaluate submitted works confidentially
+- Multi-dimensional scoring: Quality (1-100), Originality (1-100), Impact (1-100)
+- Review comments are encrypted to maintain privacy
+
+### 3. Calculation Phase
+- System performs homomorphic operations on encrypted scores
+- Aggregate calculations completed without decrypting individual reviews
+- Fair and unbiased winner selection based on mathematical computation
+
+### 4. Announcement Phase
+- Category-specific award results published
+- Winner addresses revealed while maintaining review confidentiality
+- Historical award records available for transparency
+
+## 🌟 Benefits
+
+### For the Literary Community
+
+- **Merit-Based Recognition**: Awards based solely on literary quality, not connections
+- **Inclusive Participation**: Open to all authors regardless of background or status
+- **Intellectual Property Safety**: Protected environment for sharing unpublished works
+- **Trust in Process**: Cryptographic guarantees of fairness and confidentiality
+
+### For Award Organizations
+
+- **Enhanced Credibility**: Cryptographically verifiable fair selection process
+- **Reduced Controversy**: Minimize disputes through provable neutrality
+- **Efficient Management**: Automated scoring and winner selection
+- **Global Reach**: Attract international participants with privacy assurances
+
+### For the Blockchain Ecosystem
+
+- **FHE Showcase**: Demonstrate practical application of advanced cryptography
+- **Privacy Innovation**: Pioneer confidential computing in creative industries
+- **Adoption Driver**: Bring literary community to blockchain technology
+- **Standard Setting**: Establish best practices for privacy-preserving evaluations
+
+## 🔒 Security Features
+
+- **Complete Review Encryption**: All scores and comments encrypted using FHE
+- **Reviewer Identity Protection**: Prevent external pressure and manipulation
+- **Automated Smart Contract Execution**: Ensure procedural fairness
+- **Time-Locked Periods**: Enforce proper workflow and prevent premature access
+- **Immutable Audit Trail**: All actions permanently recorded on blockchain
+- **Multi-Signature Administration**: Distributed control over critical functions
+
+## 🔮 Future Enhancements
+
+- **Multi-Round Reviews**: Support for preliminary screening and final evaluation rounds
+- **Category-Specific Criteria**: Customizable scoring dimensions for different genres
+- **Reviewer Reputation System**: Track expert accuracy and reliability over time
+- **Decentralized Governance**: Community voting on award criteria and processes
+- **Cross-Platform Integration**: Connect with literary databases and publishing platforms
+- **AI-Assisted Analysis**: Optional encrypted AI evaluation alongside human reviews
+- **Token Incentives**: Reward authors, reviewers, and platform participants
+- **Mobile Application**: Native mobile experience for submissions and reviews
 
 ## 🤝 Contributing
 
-This example is part of the FHEVM SDK bounty submission. Contributions welcome!
+We welcome contributions from the literary community, blockchain developers, and cryptography experts. Together, we can build a fairer, more transparent system for recognizing literary excellence.
+
+**Areas for Contribution:**
+- Smart contract optimization and security audits
+- Frontend user experience improvements
+- FHE implementation enhancements
+- Documentation and translation
+- Testing and quality assurance
 
 ## 📄 License
 
-MIT License - see [LICENSE](../../LICENSE)
+MIT License - This project is open-source and available for use in promoting fair and confidential literary evaluation worldwide.
+
+## 📧 Contact & Support
+
+For inquiries, collaboration opportunities, or support:
+ 
+- **Live Application**: https://literature-review-system-smoky.vercel.app/
 
 ---
 
-**This example demonstrates a complete, production-ready dApp using the FHEVM SDK for confidential computations.**
+**Built with ❤️ for the global literary community | Powered by Fully Homomorphic Encryption | Securing creativity through cryptography**
